@@ -1,0 +1,133 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Utensils, Mail, Key, AlertCircle } from "lucide-react";
+import Link from "next/link";
+
+export default function LoginPage() {
+  const router = useRouter();
+  const [formData, setFormData] = useState({
+    identifier: "",
+    password: "",
+  });
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+
+    // Simulate API call - will be replaced with actual authentication
+    setTimeout(() => {
+      if (formData.identifier && formData.password) {
+        router.push("/dashboard");
+      } else {
+        setError("Invalid staff ID or email. Please try again.");
+      }
+      setIsLoading(false);
+    }, 1000);
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
+      <div className="max-w-md w-full">
+        {/* Logo/Brand */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center bg-white p-3 rounded-full shadow-lg mb-4">
+            <Utensils className="h-12 w-12 text-blue-600" />
+          </div>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back!</h2>
+          <p className="text-gray-600">Sign in to order your favorite meals</p>
+        </div>
+
+        {/* Login Card */}
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start space-x-2">
+                <AlertCircle className="h-5 w-5 text-red-500 mt-0.5" />
+                <div>
+                  <p className="text-red-800 text-sm">{error}</p>
+                  <p className="text-red-600 text-xs mt-1">
+                    Please use your registered staff ID or email
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Staff ID/Email Field */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Staff ID or Email Address
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={formData.identifier}
+                  onChange={(e) =>
+                    setFormData({ ...formData, identifier: e.target.value })
+                  }
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                  placeholder="e.g., NNGW12345 or john@nngw.com"
+                  required
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Only registered NNGW staff can access the canteen
+              </p>
+            </div>
+
+            {/* Password Field */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                  placeholder="Enter your password"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="w-5 h-5 border-t-2 border-white rounded-full animate-spin"></div>
+                  <span>Signing in...</span>
+                </div>
+              ) : (
+                "Sign In"
+              )}
+            </button>
+          </form>
+
+          {/* Info Note */}
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <div className="bg-blue-50 rounded-lg p-4">
+              <p className="text-sm text-blue-800">
+                <strong className="font-semibold">Note:</strong> This system is exclusively for NNGW staff members. 
+                Please contact HR or administrator if you don't have access.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
