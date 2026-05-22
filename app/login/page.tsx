@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Utensils, Mail, Key, AlertCircle } from "lucide-react";
-import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth(); // ← Add this line
   const [formData, setFormData] = useState({
     identifier: "",
     password: "",
@@ -19,15 +20,36 @@ export default function LoginPage() {
     setError("");
     setIsLoading(true);
 
-    // Simulate API call - will be replaced with actual authentication
-    setTimeout(() => {
-      if (formData.identifier && formData.password) {
-        router.push("/dashboard");
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Use Auth Context login instead of manual localStorage
+        login(data.data.token, data.data.user);
+        
+        // Redirect based on role
+        if (data.data.user.role === 'admin') {
+          router.push('/admin');
+        } else {
+          router.push('/dashboard');
+        }
       } else {
-        setError("Invalid staff ID or email. Please try again.");
+        setError(data.error || 'Invalid staff ID or email. Please try again.');
       }
+    } catch (error) {
+      console.error('Login error:', error);
+      setError('Network error. Please try again.');
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -71,13 +93,10 @@ export default function LoginPage() {
                     setFormData({ ...formData, identifier: e.target.value })
                   }
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                  placeholder="e.g., NNGW12345 or john@nngw.com"
+                  placeholder="e.g., NNGW1001 or john@nngw.com"
                   required
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Only registered NNGW staff can access the canteen
-              </p>
             </div>
 
             {/* Password Field */}
@@ -121,8 +140,9 @@ export default function LoginPage() {
           <div className="mt-6 pt-6 border-t border-gray-200">
             <div className="bg-blue-50 rounded-lg p-4">
               <p className="text-sm text-blue-800">
-                <strong className="font-semibold">Note:</strong> This system is exclusively for NNGW staff members. 
-                Please contact HR or administrator if you don't have access.
+                <strong className="font-semibold">Demo Credentials:</strong><br />
+                Staff: NNGW1001 / staff123<br />
+                Admin: admin@nngw.com / Admin@123
               </p>
             </div>
           </div>

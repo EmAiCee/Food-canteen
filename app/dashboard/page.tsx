@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Clock, TrendingUp, ShoppingBag, Search } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Clock, TrendingUp, ShoppingBag, Search, User } from "lucide-react";
 import { PlaceholderImage } from "@/components/shared/PlaceholderImage";
+import { useAuth } from "@/context/AuthContext";
 
 // Mock menu data
 const menuItems = [
@@ -57,6 +59,8 @@ const menuItems = [
 ];
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const { isLoggedIn, isLoading, user, updateCartCount } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [cartCount, setCartCount] = useState(0);
@@ -65,6 +69,13 @@ export default function DashboardPage() {
   const [lastAddedItem, setLastAddedItem] = useState("");
 
   const categories = ["All", "Main Course", "Fast Food", "Vegetarian", "Dessert"];
+
+  // Wait for auth to load before checking login status
+  useEffect(() => {
+    if (!isLoading && !isLoggedIn) {
+      router.push("/login");
+    }
+  }, [isLoading, isLoggedIn, router]);
 
   // Load cart count and total on component mount
   useEffect(() => {
@@ -78,7 +89,6 @@ export default function DashboardPage() {
     
     updateCart();
     
-    // Listen for cart updates from other components
     window.addEventListener("cartUpdated", updateCart);
     return () => window.removeEventListener("cartUpdated", updateCart);
   }, []);
@@ -91,17 +101,12 @@ export default function DashboardPage() {
   });
 
   const addToCart = (item: typeof menuItems[0]) => {
-    // Get existing cart from localStorage
     const existingCart = JSON.parse(localStorage.getItem("cart") || "[]");
-    
-    // Check if item already exists
     const existingItemIndex = existingCart.findIndex((cartItem: any) => cartItem.id === item.id);
     
     if (existingItemIndex > -1) {
-      // Increase quantity if item exists
       existingCart[existingItemIndex].quantity += 1;
     } else {
-      // Add new item
       existingCart.push({
         id: item.id,
         name: item.name,
@@ -111,27 +116,46 @@ export default function DashboardPage() {
       });
     }
     
-    // Save back to localStorage
     localStorage.setItem("cart", JSON.stringify(existingCart));
     
-    // Update cart count and total
     const newCount = existingCart.reduce((sum: number, i: any) => sum + i.quantity, 0);
     const newTotal = existingCart.reduce((sum: number, i: any) => sum + (i.price * i.quantity), 0);
     setCartCount(newCount);
     setCartTotal(newTotal);
     setLastAddedItem(item.name);
     
-    // Trigger event for header to update
+    updateCartCount();
     window.dispatchEvent(new Event("cartUpdated"));
     
-    // Show notification
     setShowCartNotification(true);
     setTimeout(() => setShowCartNotification(false), 2000);
   };
 
+  // Show loading while checking auth
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8 text-center">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <p className="mt-2">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!isLoggedIn) {
+    return null;
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Prominent Cart Bar at the Top */}
+      {/* Simple Welcome Bar */}
+      <div className="bg-blue-50 rounded-lg p-3 mb-6 flex items-center gap-2">
+        <User className="h-5 w-5 text-blue-600" />
+        <span className="text-gray-700">
+          Welcome back, <span className="font-semibold">{user?.name?.split(' ')[0] || "Staff"}!</span>
+        </span>
+      </div>
+
+      {/* Cart Bar */}
       <div className="bg-white rounded-xl shadow-md border border-gray-200 p-4 mb-8">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center space-x-3">
@@ -153,7 +177,7 @@ export default function DashboardPage() {
                 <p className="text-2xl font-bold text-blue-600">₦{cartTotal.toLocaleString()}</p>
               </div>
               <button
-                onClick={() => window.location.href = '/dashboard/orders'}
+                onClick={() => router.push('/dashboard/orders')}
                 className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-all flex items-center gap-2 font-medium"
               >
                 <ShoppingBag className="h-4 w-4" />
@@ -172,9 +196,9 @@ export default function DashboardPage() {
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-8 mb-8 text-white relative overflow-hidden">
         <div className="relative z-10">
           <div className="max-w-2xl">
-            <h1 className="text-3xl font-bold mb-2">Welcome to NNGW Canteen</h1>
+            <h1 className="text-3xl font-bold mb-2">NNGW Canteen</h1>
             <p className="text-blue-100 mb-4">
-              Order delicious meals and get them delivered directly to your office
+              Order delicious meals delivered to your office
             </p>
             <div className="flex flex-wrap items-center gap-4 text-sm">
               <div className="flex items-center space-x-1">
@@ -183,7 +207,7 @@ export default function DashboardPage() {
               </div>
               <div className="flex items-center space-x-1">
                 <TrendingUp className="h-4 w-4" />
-                <span>Free delivery to office</span>
+                <span>Free delivery</span>
               </div>
             </div>
           </div>
@@ -191,13 +215,13 @@ export default function DashboardPage() {
         <div className="absolute right-0 top-0 bottom-0 w-64 bg-white/5 rounded-l-full"></div>
       </div>
 
-      {/* Search and Filter Section */}
+      {/* Search and Filter */}
       <div className="mb-8 flex flex-col md:flex-row gap-4">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
           <input
             type="text"
-            placeholder="Search menu items by name or description..."
+            placeholder="Search menu items..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
@@ -252,7 +276,6 @@ export default function DashboardPage() {
         <div className="text-center py-12">
           <div className="bg-gray-50 rounded-lg p-8 max-w-md mx-auto">
             <p className="text-gray-500 mb-2">No menu items found</p>
-            <p className="text-sm text-gray-400">Try adjusting your search or filter criteria</p>
             <button
               onClick={() => {
                 setSearchTerm("");
