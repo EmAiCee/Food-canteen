@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { useRouter } from "next/navigation";
 
 interface User {
   id: string;
@@ -18,7 +19,7 @@ interface AuthContextType {
   user: User | null;
   userRole: "staff" | "admin" | null;
   cartCount: number;
-  login: (token: string, userData: User) => void;
+  login: (userData: User) => void;
   logout: () => void;
   updateCartCount: () => void;
 }
@@ -26,45 +27,39 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isLoading, setIsLoading] = useState(true); // Add loading state
+  const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<"staff" | "admin" | null>(null);
   const [cartCount, setCartCount] = useState(0);
 
-  // Check auth status on mount
+  // Check auth status by calling /api/auth/me
   useEffect(() => {
-    const checkAuth = () => {
-      const token = localStorage.getItem("authToken");
-      const userData = localStorage.getItem("userData");
-      const role = localStorage.getItem("userRole") as "staff" | "admin" | null;
-      
-      if (token && userData) {
-        setIsLoggedIn(true);
-        setUser(JSON.parse(userData));
-        setUserRole(role);
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/me');
+        if (response.ok) {
+          const data = await response.json();
+          setIsLoggedIn(true);
+          setUser(data.user);
+          setUserRole(data.user.role);
+        } else {
+          setIsLoggedIn(false);
+          setUser(null);
+          setUserRole(null);
+        }
+      } catch (error) {
+        setIsLoggedIn(false);
+        setUser(null);
+        setUserRole(null);
+      } finally {
+        setIsLoading(false);
       }
-      
-      updateCartCount();
-      setIsLoading(false); // Mark loading as complete
     };
     
     checkAuth();
-    
-    // Listen for storage changes (login/logout in other tabs)
-    const handleStorageChange = () => {
-      const newToken = localStorage.getItem("authToken");
-      const newUserData = localStorage.getItem("userData");
-      const newRole = localStorage.getItem("userRole") as "staff" | "admin" | null;
-      
-      setIsLoggedIn(!!newToken);
-      setUser(newUserData ? JSON.parse(newUserData) : null);
-      setUserRole(newRole);
-      updateCartCount();
-    };
-    
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
+    updateCartCount();
   }, []);
 
   const updateCartCount = () => {
@@ -72,35 +67,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCartCount(cart.length);
   };
 
-  const login = (token: string, userData: User) => {
-    localStorage.setItem("authToken", token);
-    localStorage.setItem("userData", JSON.stringify(userData));
-    localStorage.setItem("userRole", userData.role);
-    
+  const login = (userData: User) => {
     setIsLoggedIn(true);
     setUser(userData);
     setUserRole(userData.role);
     updateCartCount();
-    
-    // Dispatch event for other components
-    window.dispatchEvent(new Event("authChange"));
-    window.dispatchEvent(new Event("storage"));
   };
 
-  const logout = () => {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("userData");
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("cart");
-    
-    setIsLoggedIn(false);
-    setUser(null);
-    setUserRole(null);
-    setCartCount(0);
-    
-    // Dispatch event for other components
-    window.dispatchEvent(new Event("authChange"));
-    window.dispatchEvent(new Event("storage"));
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setIsLoggedIn(false);
+      setUser(null);
+      setUserRole(null);
+      localStorage.removeItem("cart");
+      router.push('/login');
+    }
   };
 
   return (
