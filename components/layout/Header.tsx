@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { 
   Utensils, 
   ShoppingCart, 
@@ -14,49 +14,21 @@ import {
   LogIn,
   LogOut,
   ClipboardList,
-  LayoutDashboard
+  LayoutDashboard,
+  Settings
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 
 export function Header() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { isLoggedIn, userRole, cartCount, user, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [cartCount, setCartCount] = useState(0);
-  const [userRole, setUserRole] = useState<"staff" | "admin" | null>(null);
-
-  // Check authentication status on mount and when localStorage changes
-  useEffect(() => {
-    const checkAuth = () => {
-      const token = localStorage.getItem("authToken");
-      const role = localStorage.getItem("userRole") as "staff" | "admin" | null;
-      setIsLoggedIn(!!token);
-      setUserRole(role);
-      
-      // Get cart count from localStorage
-      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-      setCartCount(cart.length);
-    };
-
-    checkAuth();
-    
-    // Listen for cart updates
-    const handleCartUpdate = () => {
-      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-      setCartCount(cart.length);
-    };
-    
-    window.addEventListener("cartUpdated", handleCartUpdate);
-    return () => window.removeEventListener("cartUpdated", handleCartUpdate);
-  }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("userData");
-    setIsLoggedIn(false);
-    setUserRole(null);
-    window.location.href = "/";
+    logout();
+    router.push("/");
   };
 
   // Navigation items for different user types
@@ -73,9 +45,9 @@ export function Header() {
   ];
 
   const adminNavItems = [
-    { href: "/admin", label: "Admin Dashboard", icon: LayoutDashboard },
-    { href: "/admin/staff", label: "Staff Management", icon: User },
-    { href: "/admin/orders", label: "Order Management", icon: ClipboardList },
+    { href: "/admin", label: "Admin", icon: LayoutDashboard },
+    { href: "/admin/staff", label: "Staff", icon: Settings },
+    { href: "/admin/orders", label: "Orders", icon: ClipboardList },
   ];
 
   // Determine which nav items to show
@@ -87,12 +59,19 @@ export function Header() {
 
   const navItems = getNavItems();
 
+  // Get dashboard link based on role
+  const getDashboardLink = () => {
+    if (!isLoggedIn) return "/";
+    if (userRole === "admin") return "/admin";
+    return "/dashboard";
+  };
+
   return (
     <header className="bg-white shadow-md border-b border-gray-200 sticky top-0 z-50">
       <nav className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2 group">
+          <Link href={getDashboardLink()} className="flex items-center space-x-2 group">
             <div className="bg-blue-600 p-1.5 rounded-lg group-hover:bg-blue-700 transition">
               <Utensils className="h-6 w-6 text-white" />
             </div>
@@ -126,8 +105,8 @@ export function Header() {
               );
             })}
 
-            {/* Cart Icon - Always visible when logged in */}
-            {isLoggedIn && (
+            {/* Cart Icon - Only visible when logged in as staff */}
+            {isLoggedIn && userRole === "staff" && (
               <Link
                 href="/dashboard/orders"
                 className="relative ml-2 p-2 rounded-lg hover:bg-gray-100 transition"
@@ -141,15 +120,21 @@ export function Header() {
               </Link>
             )}
 
-            {/* Auth Button */}
+            {/* User Info & Auth Button */}
             {isLoggedIn ? (
-              <button
-                onClick={handleLogout}
-                className="ml-4 flex items-center space-x-1 px-4 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition"
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Logout</span>
-              </button>
+              <div className="ml-4 flex items-center gap-3">
+                <div className="text-right hidden lg:block">
+                  
+                  <p className="text-sm font-semibold text-gray-900">{user?.name}</p>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center space-x-1 px-4 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Logout</span>
+                </button>
+              </div>
             ) : (
               <Link
                 href="/login"
@@ -202,8 +187,8 @@ export function Header() {
                 );
               })}
 
-              {/* Cart in mobile menu */}
-              {isLoggedIn && (
+              {/* Cart in mobile menu - Only for staff */}
+              {isLoggedIn && userRole === "staff" && (
                 <Link
                   href="/dashboard/orders"
                   className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-gray-50 transition"
@@ -245,11 +230,12 @@ export function Header() {
               )}
             </div>
 
-            {/* Staff Info Footer */}
-            {isLoggedIn && (
+            {/* User Info Footer */}
+            {isLoggedIn && user && (
               <div className="mt-4 pt-4 border-t border-gray-200 px-4">
-                <p className="text-xs text-gray-500">
-                  Logged in as NNGW Staff Member
+                <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Logged in as {userRole === "admin" ? "Administrator" : "Staff Member"}
                 </p>
               </div>
             )}

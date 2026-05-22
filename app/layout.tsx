@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
-
-const inter = Inter({ subsets: ["latin"] });
+import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
   title: "NNGW Canteen - Staff Food Ordering System",
@@ -17,9 +15,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>
-        <Header />
-        <main className="min-h-screen">{children}</main>
+      <body className="font-sans antialiased">
+        <AuthProvider>
+          <Header />
+          <main className="min-h-screen">{children}</main>
+        </AuthProvider>
       </body>
     </html>
   );
