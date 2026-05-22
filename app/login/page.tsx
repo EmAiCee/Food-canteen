@@ -7,7 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth(); // ← Add this line
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     identifier: "",
     password: "",
@@ -31,12 +31,12 @@ export default function LoginPage() {
 
       const data = await response.json();
 
-      if (response.ok && data.success) {
-        // Use Auth Context login instead of manual localStorage
-        login(data.data.token, data.data.user);
+      if (response.ok) {
+        // No token to store - it's in an httpOnly cookie
+        login(data.user);
         
         // Redirect based on role
-        if (data.data.user.role === 'admin') {
+        if (data.user.role === 'admin') {
           router.push('/admin');
         } else {
           router.push('/dashboard');
@@ -79,7 +79,6 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Staff ID/Email Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Staff ID or Email Address
@@ -89,9 +88,7 @@ export default function LoginPage() {
                 <input
                   type="text"
                   value={formData.identifier}
-                  onChange={(e) =>
-                    setFormData({ ...formData, identifier: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, identifier: e.target.value })}
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                   placeholder="e.g., NNGW1001 or john@nngw.com"
                   required
@@ -99,7 +96,6 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Password Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Password
@@ -109,9 +105,7 @@ export default function LoginPage() {
                 <input
                   type="password"
                   value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                   placeholder="Enter your password"
                   required
@@ -119,7 +113,6 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={isLoading}
@@ -136,7 +129,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Info Note */}
           <div className="mt-6 pt-6 border-t border-gray-200">
             <div className="bg-blue-50 rounded-lg p-4">
               <p className="text-sm text-blue-800">
