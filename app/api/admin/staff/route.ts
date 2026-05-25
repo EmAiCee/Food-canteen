@@ -5,10 +5,9 @@ import { getSessionFromRequest } from '@/lib/auth-cookies';
 import { hashPassword } from '@/lib/auth';
 import { z } from 'zod';
 
-// Validation schemas
 const createStaffSchema = z.object({
   staffId: z.string().regex(/^[A-Z0-9]+$/i, 'Staff ID must contain only letters and numbers'),
-  email: z.string().email('Invalid email address'),
+  email: z.string().email('Please enter a valid email address'),
   name: z.string().min(2, 'Name must be at least 2 characters'),
   department: z.string().optional(),
   role: z.enum(['staff', 'admin']).default('staff'),
@@ -16,12 +15,10 @@ const createStaffSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
+    // Use cookie-based session
     const session = await getSessionFromRequest(req);
     if (!session || session.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     await connectDB();
@@ -30,36 +27,26 @@ export async function GET(req: NextRequest) {
       .select('-password')
       .sort({ createdAt: -1 });
     
-    return NextResponse.json({
-      success: true,
-      staff: staff
-    });
+    return NextResponse.json({ success: true, staff });
   } catch (error: any) {
-    console.error('Error fetching staff:', error);
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
+    // Use cookie-based session
     const session = await getSessionFromRequest(req);
     if (!session || session.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized. Admin access required.' }, { status: 401 });
     }
 
     const body = await req.json();
     
-    // Validate input
     const validation = createStaffSchema.safeParse(body);
     if (!validation.success) {
       return NextResponse.json(
-        { error: 'Validation failed', details: validation.errors },
+        { error: validation.errors[0].message },
         { status: 400 }
       );
     }
@@ -70,22 +57,23 @@ export async function POST(req: NextRequest) {
     
     // Check for duplicates
     const existingStaff = await User.findOne({
-      $or: [{ staffId }, { email: email.toLowerCase() }]
+      $or: [{ staffId: staffId.toUpperCase() }, { email: email.toLowerCase() }]
     });
     
     if (existingStaff) {
+      const field = existingStaff.staffId === staffId.toUpperCase() ? 'Staff ID' : 'Email';
       return NextResponse.json(
-        { error: 'Staff ID or email already exists' },
+        { error: `${field} already exists. Please use a different one.` },
         { status: 400 }
       );
     }
     
-    // Create staff with temporary password
-    const tempPassword = Math.random().toString(36).slice(-8);
+    // Create staff with fixed temporary password
+    const tempPassword = 'password123';
     const hashedPassword = await hashPassword(tempPassword);
     
     const newStaff = await User.create({
-      staffId,
+      staffId: staffId.toUpperCase(),
       email: email.toLowerCase(),
       password: hashedPassword,
       name,
@@ -106,13 +94,17 @@ export async function POST(req: NextRequest) {
         role: newStaff.role,
         status: newStaff.status,
       },
-      tempPassword // Only send once for the admin to share
+      tempPassword
     });
   } catch (error: any) {
     console.error('Error adding staff:', error);
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      return NextResponse.json(
+        { error: `${field === 'staffId' ? 'Staff ID' : 'Email'} already exists. Please use a different one.` },
+        { status: 400 }
+      );
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

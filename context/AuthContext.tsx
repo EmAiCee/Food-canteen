@@ -22,6 +22,7 @@ interface AuthContextType {
   login: (userData: User) => void;
   logout: () => void;
   updateCartCount: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,32 +35,62 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userRole, setUserRole] = useState<"staff" | "admin" | null>(null);
   const [cartCount, setCartCount] = useState(0);
 
-  // Check auth status by calling /api/auth/me
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const response = await fetch('/api/auth/me');
-        if (response.ok) {
-          const data = await response.json();
-          setIsLoggedIn(true);
-          setUser(data.user);
-          setUserRole(data.user.role);
-        } else {
-          setIsLoggedIn(false);
-          setUser(null);
-          setUserRole(null);
-        }
-      } catch (error) {
+  // Fetch user data from API
+  const fetchUser = async () => {
+    try {
+      const response = await fetch('/api/auth/me', {
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data.user);
+        setUserRole(data.user.role);
+        setIsLoggedIn(true);
+        return data.user;
+      } else {
         setIsLoggedIn(false);
         setUser(null);
         setUserRole(null);
-      } finally {
-        setIsLoading(false);
+        return null;
       }
+    } catch (error) {
+      console.error('Failed to fetch user:', error);
+      return null;
+    }
+  };
+
+  // Refresh user data (called after profile update)
+  const refreshUser = async () => {
+    const updatedUser = await fetchUser();
+    if (updatedUser) {
+      // Dispatch event to notify components
+      window.dispatchEvent(new Event('userUpdated'));
+    }
+  };
+
+  // Check auth status
+  useEffect(() => {
+    const checkAuth = async () => {
+      await fetchUser();
+      updateCartCount();
+      setIsLoading(false);
     };
     
     checkAuth();
-    updateCartCount();
+    
+    // Listen for profile updates
+    const handleProfileUpdate = () => {
+      fetchUser();
+    };
+    
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+    window.addEventListener('userUpdated', handleProfileUpdate);
+    
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
+      window.removeEventListener('userUpdated', handleProfileUpdate);
+    };
   }, []);
 
   const updateCartCount = () => {
@@ -98,6 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       logout,
       updateCartCount,
+      refreshUser,
     }}>
       {children}
     </AuthContext.Provider>

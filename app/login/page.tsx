@@ -73,7 +73,7 @@ export default function LoginPage() {
                 <div>
                   <p className="text-red-800 text-sm">{error}</p>
                   <p className="text-red-600 text-xs mt-1">
-                    Please use your registered staff ID or email
+                    Please use your registered ID or email
                   </p>
                 </div>
               </div>

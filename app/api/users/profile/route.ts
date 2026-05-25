@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import User from '@/models/User';
-import { getUserFromRequest } from '@/lib/auth';
+import { getSessionFromRequest } from '@/lib/auth-cookies';
 
 export async function PUT(req: NextRequest) {
   try {
-    const user = getUserFromRequest(req);
-    if (!user) {
+    const session = await getSessionFromRequest(req);
+    if (!session) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -19,9 +19,9 @@ export async function PUT(req: NextRequest) {
     await connectDB();
     
     const updatedUser = await User.findByIdAndUpdate(
-      user.userId,
+      session.userId,
       { name, department },
-      { returnDocument: 'after', runValidators: true }
+      { new: true, runValidators: true }
     ).select('-password');
     
     if (!updatedUser) {

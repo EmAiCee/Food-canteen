@@ -2,65 +2,25 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Clock, TrendingUp, ShoppingBag, Search, User } from "lucide-react";
-import { PlaceholderImage } from "@/components/shared/PlaceholderImage";
+import { Clock, TrendingUp, ShoppingBag, Search, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
-// Mock menu data
-const menuItems = [
-  {
-    id: 1,
-    name: "Grilled Chicken with Rice",
-    description: "Juicy grilled chicken served with seasoned rice and vegetables",
-    price: 850,
-    category: "Main Course",
-    available: true,
-  },
-  {
-    id: 2,
-    name: "Beef Burger Combo",
-    description: "100% beef patty with cheese, lettuce, tomato, and fries",
-    price: 750,
-    category: "Fast Food",
-    available: true,
-  },
-  {
-    id: 3,
-    name: "Vegetable Pasta",
-    description: "Penne pasta with fresh vegetables in creamy Alfredo sauce",
-    price: 650,
-    category: "Vegetarian",
-    available: true,
-  },
-  {
-    id: 4,
-    name: "Chicken Shawarma Wrap",
-    description: "Marinated chicken with garlic sauce and vegetables",
-    price: 550,
-    category: "Fast Food",
-    available: true,
-  },
-  {
-    id: 5,
-    name: "Jollof Rice with Fish",
-    description: "Spicy jollof rice served with grilled tilapia",
-    price: 950,
-    category: "Main Course",
-    available: true,
-  },
-  {
-    id: 6,
-    name: "Fruit Salad Bowl",
-    description: "Fresh mixed fruits with honey yogurt dressing",
-    price: 400,
-    category: "Dessert",
-    available: true,
-  },
-];
+interface MenuItem {
+  _id: string;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  imageUrl: string;
+  available: boolean;
+}
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { isLoggedIn, isLoading, user, updateCartCount } = useAuth();
+  const { isLoggedIn, isLoading: authLoading, user, updateCartCount } = useAuth();
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [filteredItems, setFilteredItems] = useState<MenuItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [cartCount, setCartCount] = useState(0);
@@ -68,51 +28,93 @@ export default function DashboardPage() {
   const [showCartNotification, setShowCartNotification] = useState(false);
   const [lastAddedItem, setLastAddedItem] = useState("");
 
-  const categories = ["All", "Main Course", "Fast Food", "Vegetarian", "Dessert"];
+  // Updated categories with Nigerian foods
+  const categories = [
+    "All", 
+    "Swallow", 
+    "Fast Food", 
+    "Vegetarian", 
+    "Rice Dishes", 
+    "Soups & Stews",
+    "Beverages", 
+    "Desserts"
+  ];
 
-  // Wait for auth to load before checking login status
-  useEffect(() => {
-    if (!isLoading && !isLoggedIn) {
-      router.push("/login");
+  // Fetch menu items from API
+  const fetchMenuItems = async () => {
+    try {
+      const response = await fetch('/api/menu');
+      const data = await response.json();
+      
+      if (response.ok) {
+        setMenuItems(data.menuItems);
+        setFilteredItems(data.menuItems);
+      }
+    } catch (error) {
+      console.error('Failed to fetch menu:', error);
+    } finally {
+      setLoading(false);
     }
-  }, [isLoading, isLoggedIn, router]);
+  };
 
-  // Load cart count and total on component mount
+  // Load cart data
+  const updateCart = () => {
+    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+    const count = cart.reduce((sum: number, item: any) => sum + item.quantity, 0);
+    const total = cart.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+    setCartCount(count);
+    setCartTotal(total);
+  };
+
   useEffect(() => {
-    const updateCart = () => {
-      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-      const count = cart.reduce((sum: number, item: any) => sum + item.quantity, 0);
-      const total = cart.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
-      setCartCount(count);
-      setCartTotal(total);
-    };
+    if (!authLoading && !isLoggedIn) {
+      router.push("/login");
+      return;
+    }
     
-    updateCart();
+    if (isLoggedIn) {
+      fetchMenuItems();
+      updateCart();
+    }
+  }, [isLoggedIn, authLoading, router]);
+
+  // Filter items when search or category changes
+  useEffect(() => {
+    let filtered = menuItems;
     
-    window.addEventListener("cartUpdated", updateCart);
-    return () => window.removeEventListener("cartUpdated", updateCart);
-  }, []);
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(item =>
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.description.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    // Filter by category
+    if (selectedCategory !== "All") {
+      filtered = filtered.filter(item => item.category === selectedCategory);
+    }
+    
+    // Only show available items
+    filtered = filtered.filter(item => item.available);
+    
+    setFilteredItems(filtered);
+  }, [searchTerm, selectedCategory, menuItems]);
 
-  const filteredItems = menuItems.filter((item) => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
-
-  const addToCart = (item: typeof menuItems[0]) => {
+  const addToCart = (item: MenuItem) => {
     const existingCart = JSON.parse(localStorage.getItem("cart") || "[]");
-    const existingItemIndex = existingCart.findIndex((cartItem: any) => cartItem.id === item.id);
+    const existingItemIndex = existingCart.findIndex((cartItem: any) => cartItem.id === item._id);
     
     if (existingItemIndex > -1) {
       existingCart[existingItemIndex].quantity += 1;
     } else {
       existingCart.push({
-        id: item.id,
+        id: item._id,
         name: item.name,
         price: item.price,
         quantity: 1,
-        description: item.description
+        description: item.description,
+        imageUrl: item.imageUrl
       });
     }
     
@@ -132,11 +134,11 @@ export default function DashboardPage() {
   };
 
   // Show loading while checking auth
-  if (isLoading) {
+  if (authLoading || loading) {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <p className="mt-2">Loading...</p>
+        <Loader2 className="inline-block h-8 w-8 animate-spin text-blue-600" />
+        <p className="mt-2">Loading menu...</p>
       </div>
     );
   }
@@ -149,7 +151,9 @@ export default function DashboardPage() {
     <div className="container mx-auto px-4 py-8">
       {/* Simple Welcome Bar */}
       <div className="bg-blue-50 rounded-lg p-3 mb-6 flex items-center gap-2">
-        <User className="h-5 w-5 text-blue-600" />
+        <div className="bg-blue-100 p-1.5 rounded-full">
+          <TrendingUp className="h-4 w-4 text-blue-600" />
+        </div>
         <span className="text-gray-700">
           Welcome back, <span className="font-semibold">{user?.name?.split(' ')[0] || "Staff"}!</span>
         </span>
@@ -245,47 +249,78 @@ export default function DashboardPage() {
       </div>
 
       {/* Menu Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredItems.map((item) => (
-          <div key={item.id} className="card hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-            <PlaceholderImage text={item.name} className="w-full h-48 rounded-lg mb-4" />
-            <div className="flex justify-between items-start mb-2">
-              <h3 className="text-lg font-semibold text-gray-900">{item.name}</h3>
-              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                {item.category}
-              </span>
-            </div>
-            <p className="text-gray-600 text-sm mb-3 line-clamp-2">{item.description}</p>
-            <div className="flex justify-between items-center mt-4">
-              <span className="text-2xl font-bold text-blue-600">
-                ₦{item.price.toLocaleString()}
-              </span>
-              <button
-                onClick={() => addToCart(item)}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all flex items-center space-x-1 hover:scale-105"
-              >
-                <ShoppingBag className="h-4 w-4" />
-                <span>Add to Cart</span>
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {filteredItems.length === 0 && (
+      {filteredItems.length === 0 ? (
         <div className="text-center py-12">
           <div className="bg-gray-50 rounded-lg p-8 max-w-md mx-auto">
-            <p className="text-gray-500 mb-2">No menu items found</p>
-            <button
-              onClick={() => {
-                setSearchTerm("");
-                setSelectedCategory("All");
-              }}
-              className="mt-4 text-blue-600 hover:text-blue-700 text-sm font-medium"
-            >
-              Clear all filters
-            </button>
+            <p className="text-gray-500 mb-2">No menu items available</p>
+            <p className="text-sm text-gray-400">
+              {searchTerm || selectedCategory !== "All" 
+                ? "Try adjusting your search or filter criteria" 
+                : "Check back later for new items"}
+            </p>
+            {(searchTerm || selectedCategory !== "All") && (
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  setSelectedCategory("All");
+                }}
+                className="mt-4 text-blue-600 hover:text-blue-700 text-sm font-medium"
+              >
+                Clear all filters
+              </button>
+            )}
           </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredItems.map((item) => (
+            <div key={item._id} className="card hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+              {/* Image with fallback */}
+              <div className="relative w-full h-48 rounded-lg mb-4 overflow-hidden bg-gray-100">
+                {item.imageUrl ? (
+                  <img
+                    src={item.imageUrl}
+                    alt={item.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      const parent = e.currentTarget.parentElement;
+                      if (parent) {
+                        const placeholder = document.createElement('div');
+                        placeholder.className = 'w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600 text-white';
+                        placeholder.innerHTML = `<span class="text-lg font-semibold">${item.name.substring(0, 20)}</span>`;
+                        parent.appendChild(placeholder);
+                      }
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600 text-white">
+                    <span className="text-lg font-semibold">{item.name.substring(0, 20)}</span>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-lg font-semibold text-gray-900">{item.name}</h3>
+                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                  {item.category}
+                </span>
+              </div>
+              <p className="text-gray-600 text-sm mb-3 line-clamp-2">{item.description}</p>
+              <div className="flex justify-between items-center mt-4">
+                <span className="text-2xl font-bold text-blue-600">
+                  ₦{item.price.toLocaleString()}
+                </span>
+                <button
+                  onClick={() => addToCart(item)}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all flex items-center space-x-1 hover:scale-105"
+                >
+                  <ShoppingBag className="h-4 w-4" />
+                  <span>Add to Cart</span>
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
