@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import User from '@/models/User';
-import { getUserFromRequest } from '@/lib/auth';
+import { getSessionFromRequest } from '@/lib/auth-cookies';
 
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = getUserFromRequest(req);
-    if (!user || user.role !== 'admin') {
+    const session = await getSessionFromRequest(req);
+    if (!session || session.role !== 'admin') {
       return NextResponse.json(
         { error: 'Unauthorized. Admin access required.' },
         { status: 401 }
@@ -23,6 +23,7 @@ export async function PUT(
     
     const { id } = await params;
     
+    // Fix: Use returnDocument: 'after' instead of new: true
     const updatedStaff = await User.findByIdAndUpdate(
       id,
       { name, department, role, status },
@@ -55,8 +56,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = getUserFromRequest(req);
-    if (!user || user.role !== 'admin') {
+    const session = await getSessionFromRequest(req);
+    if (!session || session.role !== 'admin') {
       return NextResponse.json(
         { error: 'Unauthorized. Admin access required.' },
         { status: 401 }

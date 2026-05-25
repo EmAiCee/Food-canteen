@@ -12,8 +12,11 @@ import {
   X,
   Edit2,
   LogOut,
-  CheckCircle
+  CheckCircle,
+  Loader2,
+  ArrowLeft
 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 interface UserData {
   id: string;
@@ -27,19 +30,18 @@ interface UserData {
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { isLoggedIn, isLoading: authLoading, user, logout } = useAuth();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   
-  // Edit form state
   const [editForm, setEditForm] = useState({
     name: "",
     department: "",
   });
   
-  // Password change state
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
@@ -47,24 +49,40 @@ export default function ProfilePage() {
   });
   const [updating, setUpdating] = useState(false);
 
-  // Load user data
+  // Fetch user data from API
+  const fetchUserData = async () => {
+    try {
+      const response = await fetch('/api/auth/me', {
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setUserData(data.user);
+        setEditForm({
+          name: data.user.name || "",
+          department: data.user.department || "",
+        });
+      } else if (response.status === 401) {
+        router.push("/login");
+      }
+    } catch (error) {
+      console.error('Failed to fetch user data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const token = localStorage.getItem("authToken");
-    const user = localStorage.getItem("userData");
-    
-    if (!token || !user) {
+    if (!authLoading && !isLoggedIn) {
       router.push("/login");
       return;
     }
     
-    const parsedUser = JSON.parse(user);
-    setUserData(parsedUser);
-    setEditForm({
-      name: parsedUser.name || "",
-      department: parsedUser.department || "",
-    });
-    setLoading(false);
-  }, [router]);
+    if (isLoggedIn) {
+      fetchUserData();
+    }
+  }, [isLoggedIn, authLoading, router]);
 
   // Update profile
   const handleUpdateProfile = async () => {
@@ -72,31 +90,35 @@ export default function ProfilePage() {
     setMessage(null);
     
     try {
-      const token = localStorage.getItem("authToken");
-      const response = await fetch(`/api/users/profile`, {
+      const response = await fetch('/api/users/profile', {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(editForm),
       });
       
       const data = await response.json();
       
       if (response.ok) {
-        // Update local storage
-        const updatedUser = { ...userData, ...editForm };
-        localStorage.setItem("userData", JSON.stringify(updatedUser));
-        setUserData(updatedUser);
-        
         setMessage({ type: 'success', text: 'Profile updated successfully!' });
         setEditing(false);
         
-        // Refresh after 1 second
-        setTimeout(() => {
-          setMessage(null);
-        }, 3000);
+        // Refresh user data
+        await fetchUserData();
+        
+        // Update localStorage
+        const updatedUser = {
+          ...userData,
+          name: editForm.name,
+          department: editForm.department,
+        };
+        localStorage.setItem('userData', JSON.stringify(updatedUser));
+        
+        // Dispatch events
+        window.dispatchEvent(new Event('profileUpdated'));
+        window.dispatchEvent(new Event('userUpdated'));
+        
+        setTimeout(() => setMessage(null), 3000);
       } else {
         setMessage({ type: 'error', text: data.error || 'Failed to update profile' });
       }
@@ -123,13 +145,10 @@ export default function ProfilePage() {
     setMessage(null);
     
     try {
-      const token = localStorage.getItem("authToken");
-      const response = await fetch(`/api/users/change-password`, {
+      const response = await fetch('/api/users/change-password', {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           currentPassword: passwordForm.currentPassword,
           newPassword: passwordForm.newPassword,
@@ -139,13 +158,15 @@ export default function ProfilePage() {
       const data = await response.json();
       
       if (response.ok) {
-        setMessage({ type: 'success', text: 'Password changed successfully!' });
+        setMessage({ type: 'success', text: 'Password changed successfully! Please login again.' });
         setShowPasswordModal(false);
         setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
         
+        // Logout after password change
         setTimeout(() => {
-          setMessage(null);
-        }, 3000);
+          logout();
+          router.push("/login");
+        }, 2000);
       } else {
         setMessage({ type: 'error', text: data.error || 'Failed to change password' });
       }
@@ -156,25 +177,45 @@ export default function ProfilePage() {
     }
   };
 
-  // Logout
-  const handleLogout = () => {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("userData");
-    localStorage.removeItem("userRole");
-    router.push("/login");
+  // Close edit mode
+  const handleCloseEditMode = () => {
+    setEditing(false);
+    setEditForm({
+      name: userData?.name || "",
+      department: userData?.department || "",
+    });
   };
 
-  if (loading) {
+  // Close password modal
+  const handleClosePasswordModal = () => {
+    setShowPasswordModal(false);
+    setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  };
+
+  if (authLoading || loading) {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <Loader2 className="inline-block h-8 w-8 animate-spin text-blue-600" />
         <p className="mt-2">Loading profile...</p>
       </div>
     );
   }
 
+  if (!isLoggedIn) {
+    return null;
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
+      {/* Back Button - Takes you back to dashboard */}
+      <button
+        onClick={() => router.push('/dashboard')}
+        className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition mb-4"
+      >
+        <ArrowLeft className="h-5 w-5" />
+        <span>Back to Dashboard</span>
+      </button>
+
       {/* Message Alert */}
       {message && (
         <div className={`mb-4 p-4 rounded-lg ${
@@ -277,7 +318,10 @@ export default function ProfilePage() {
                 </button>
                 
                 <button
-                  onClick={handleLogout}
+                  onClick={() => {
+                    logout();
+                    router.push("/login");
+                  }}
                   className="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition"
                 >
                   <LogOut className="h-4 w-4" />
@@ -288,6 +332,16 @@ export default function ProfilePage() {
           ) : (
             // Edit Mode
             <div className="space-y-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">Edit Profile</h2>
+                <button
+                  onClick={handleCloseEditMode}
+                  className="text-gray-400 hover:text-gray-600 transition"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              
               <form onSubmit={(e) => { e.preventDefault(); handleUpdateProfile(); }} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -319,10 +373,10 @@ export default function ProfilePage() {
                   <button
                     type="submit"
                     disabled={updating}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
                   >
                     {updating ? (
-                      <div className="w-4 h-4 border-t-2 border-white rounded-full animate-spin"></div>
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <Save className="h-4 w-4" />
                     )}
@@ -331,14 +385,8 @@ export default function ProfilePage() {
                   
                   <button
                     type="button"
-                    onClick={() => {
-                      setEditing(false);
-                      setEditForm({
-                        name: userData?.name || "",
-                        department: userData?.department || "",
-                      });
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                    onClick={handleCloseEditMode}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
                   >
                     <X className="h-4 w-4" />
                     Cancel
@@ -352,22 +400,21 @@ export default function ProfilePage() {
 
       {/* Change Password Modal */}
       {showPasswordModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold">Change Password</h3>
-              <button
-                onClick={() => {
-                  setShowPasswordModal(false);
-                  setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+            <div className="border-b border-gray-200 px-6 py-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-semibold">Change Password</h3>
+                <button
+                  onClick={handleClosePasswordModal}
+                  className="text-gray-400 hover:text-gray-600 transition"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
             
-            <form onSubmit={(e) => { e.preventDefault(); handleChangePassword(); }} className="space-y-4">
+            <form onSubmit={(e) => { e.preventDefault(); handleChangePassword(); }} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Current Password *
@@ -412,18 +459,22 @@ export default function ProfilePage() {
                 <button
                   type="submit"
                   disabled={updating}
-                  className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+                  className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {updating ? "Changing..." : "Change Password"}
+                  {updating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Changing...</span>
+                    </>
+                  ) : (
+                    "Change Password"
+                  )}
                 </button>
                 
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowPasswordModal(false);
-                    setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
-                  }}
-                  className="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg hover:bg-gray-300 transition"
+                  onClick={handleClosePasswordModal}
+                  className="flex-1 bg-gray-100 text-gray-800 py-2 rounded-lg hover:bg-gray-200 transition"
                 >
                   Cancel
                 </button>

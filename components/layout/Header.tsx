@@ -6,7 +6,7 @@ import {
   Utensils, 
   ShoppingCart, 
   User, 
-  Menu, 
+  Menu as MenuIcon, 
   X, 
   Home, 
   Info, 
@@ -15,7 +15,8 @@ import {
   LogOut,
   ClipboardList,
   LayoutDashboard,
-  Settings
+  Settings,
+  ShoppingBag
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -31,30 +32,33 @@ export function Header() {
     router.push("/");
   };
 
-  // Navigation items for different user types
+  // Public navigation (not logged in)
   const publicNavItems = [
     { href: "/", label: "Home", icon: Home },
     { href: "/about", label: "About", icon: Info },
     { href: "/contact", label: "Contact", icon: Phone },
   ];
 
+  // Staff navigation (logged in as staff)
   const staffNavItems = [
     { href: "/dashboard", label: "Menu", icon: Utensils },
     { href: "/dashboard/orders", label: "My Orders", icon: ClipboardList },
     { href: "/dashboard/profile", label: "Profile", icon: User },
   ];
 
+  // Admin navigation (logged in as admin) -
   const adminNavItems = [
-    { href: "/admin", label: "Admin", icon: LayoutDashboard },
+    { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
     { href: "/admin/staff", label: "Staff", icon: Settings },
+    { href: "/admin/menu", label: "Menu", icon: Utensils },
     { href: "/admin/orders", label: "Orders", icon: ClipboardList },
   ];
 
-  // Determine which nav items to show
+  // Determine which nav items to show based on role
   const getNavItems = () => {
     if (!isLoggedIn) return publicNavItems;
-    if (userRole === "admin") return [...staffNavItems, ...adminNavItems];
-    return staffNavItems;
+    if (userRole === "admin") return adminNavItems;  // Admin only sees adminNavItems
+    return staffNavItems;  // Staff only sees staffNavItems
   };
 
   const navItems = getNavItems();
@@ -78,7 +82,7 @@ export function Header() {
             <div>
               <span className="font-bold text-xl text-gray-900">NNGW Canteen</span>
               <span className="hidden md:inline-block text-xs text-gray-500 ml-2">
-                Staff Food Service
+               <strong> Staff Food Service</strong>
               </span>
             </div>
           </Link>
@@ -111,7 +115,7 @@ export function Header() {
                 href="/dashboard/orders"
                 className="relative ml-2 p-2 rounded-lg hover:bg-gray-100 transition"
               >
-                <ShoppingCart className="h-5 w-5 text-gray-600" />
+                <ShoppingBag className="h-5 w-5 text-gray-600" />
                 {cartCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
                     {cartCount}
@@ -124,8 +128,8 @@ export function Header() {
             {isLoggedIn ? (
               <div className="ml-4 flex items-center gap-3">
                 <div className="text-right hidden lg:block">
-                  
                   <p className="text-sm font-semibold text-gray-900">{user?.name}</p>
+                  <p className="text-xs text-gray-500 capitalize">{userRole}</p>
                 </div>
                 <button
                   onClick={handleLogout}
@@ -145,7 +149,7 @@ export function Header() {
                 }`}
               >
                 <LogIn className="h-4 w-4" />
-                <span>Staff Login</span>
+                <span>Login</span>
               </Link>
             )}
           </div>
@@ -158,7 +162,7 @@ export function Header() {
             {isMobileMenuOpen ? (
               <X className="h-6 w-6 text-gray-600" />
             ) : (
-              <Menu className="h-6 w-6 text-gray-600" />
+              <MenuIcon className="h-6 w-6 text-gray-600" />
             )}
           </button>
         </div>
@@ -195,7 +199,7 @@ export function Header() {
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <div className="flex items-center space-x-3">
-                    <ShoppingCart className="h-5 w-5 text-gray-600" />
+                    <ShoppingBag className="h-5 w-5 text-gray-600" />
                     <span className="font-medium">Cart</span>
                   </div>
                   {cartCount > 0 && (
@@ -225,7 +229,7 @@ export function Header() {
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <LogIn className="h-5 w-5" />
-                  <span className="font-medium">Staff Login</span>
+                  <span className="font-medium">Login</span>
                 </Link>
               )}
             </div>

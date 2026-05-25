@@ -17,20 +17,22 @@ const MenuItemSchema = new mongoose.Schema<IMenuItem>(
       type: String,
       required: [true, 'Item name is required'],
       trim: true,
+      maxlength: [100, 'Name cannot exceed 100 characters'],
     },
     description: {
       type: String,
       required: [true, 'Description is required'],
+      maxlength: [500, 'Description cannot exceed 500 characters'],
     },
     price: {
       type: Number,
       required: [true, 'Price is required'],
-      min: 0,
+      min: [0, 'Price cannot be negative'],
     },
     category: {
       type: String,
       required: [true, 'Category is required'],
-      enum: ['Main Course', 'Fast Food', 'Vegetarian', 'Dessert', 'Beverages'],
+      enum: ['Swallow', 'Fast Food', 'Vegetarian', 'Rice Dishes', 'Soups & Stews', 'Beverages', 'Desserts'],
     },
     imageUrl: {
       type: String,
@@ -46,6 +48,7 @@ const MenuItemSchema = new mongoose.Schema<IMenuItem>(
   }
 );
 
+// Create text index for search
 MenuItemSchema.index({ name: 'text', description: 'text' });
 
 export default mongoose.models.MenuItem || mongoose.model<IMenuItem>('MenuItem', MenuItemSchema);

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import User from '@/models/User';
-import { getUserFromRequest, comparePassword, hashPassword } from '@/lib/auth';
+import { getSessionFromRequest, comparePassword, hashPassword } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
   try {
-    const user = getUserFromRequest(req);
-    if (!user) {
+    const session = await getSessionFromRequest(req);
+    if (!session) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -32,8 +32,7 @@ export async function POST(req: NextRequest) {
     
     await connectDB();
     
-    // Get user with password
-    const dbUser = await User.findById(user.userId);
+    const dbUser = await User.findById(session.userId);
     
     if (!dbUser) {
       return NextResponse.json(
@@ -42,7 +41,6 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    // Verify current password
     const isValid = await comparePassword(currentPassword, dbUser.password);
     
     if (!isValid) {
@@ -52,10 +50,8 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    // Hash new password
     const hashedPassword = await hashPassword(newPassword);
     
-    // Update password
     dbUser.password = hashedPassword;
     await dbUser.save();
     
