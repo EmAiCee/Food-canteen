@@ -181,7 +181,7 @@ export default function DashboardPage() {
                 <p className="text-2xl font-bold text-blue-600">₦{cartTotal.toLocaleString()}</p>
               </div>
               <button
-                onClick={() => router.push('/dashboard/orders')}
+                onClick={() => router.push('/dashboard/checkout')}
                 className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-all flex items-center gap-2 font-medium"
               >
                 <ShoppingBag className="h-4 w-4" />
