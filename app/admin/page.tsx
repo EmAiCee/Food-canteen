@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Users, Plus, Search, Mail, UserCheck, Trash2, Edit2, X, Loader2, TrendingUp, Clock } from "lucide-react";
+import { Users, Plus, Search, Mail, UserCheck, Trash2, Edit2, X, Loader2, TrendingUp, Clock, Package } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 interface Staff {
@@ -15,21 +15,37 @@ interface Staff {
   status: string;
 }
 
+interface OrderStats {
+  totalOrders: number;
+  pendingOrders: number;
+  confirmedOrders: number;
+  preparingOrders: number;
+  readyOrders: number;
+  deliveredOrders: number;
+  cancelledOrders: number;
+  totalRevenue: number;
+}
+
 export default function AdminDashboard() {
   const router = useRouter();
   const { isLoggedIn, isLoading, userRole } = useAuth();
   const [staffList, setStaffList] = useState<Staff[]>([]);
+  const [orderStats, setOrderStats] = useState<OrderStats>({
+    totalOrders: 0,
+    pendingOrders: 0,
+    confirmedOrders: 0,
+    preparingOrders: 0,
+    readyOrders: 0,
+    deliveredOrders: 0,
+    cancelledOrders: 0,
+    totalRevenue: 0,
+  });
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [stats, setStats] = useState({
-    totalOrders: 24,
-    totalRevenue: 12500,
-    activeOrders: 8
-  });
   
   const [newStaff, setNewStaff] = useState({ 
     staffId: "", 
@@ -58,13 +74,29 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to fetch staff' });
+    }
+  };
+
+  // Fetch order statistics
+  const fetchOrderStats = async () => {
+    try {
+      const res = await fetch("/api/admin/orders/stats");
+      if (res.ok) {
+        const data = await res.json();
+        setOrderStats(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch order stats:", error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (isLoggedIn && userRole === "admin") fetchStaff();
+    if (isLoggedIn && userRole === "admin") {
+      fetchStaff();
+      fetchOrderStats();
+    }
   }, [isLoggedIn, userRole]);
 
   // Add staff
@@ -214,6 +246,7 @@ export default function AdminDashboard() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {/* Total Staff Card */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition">
           <div className="flex items-center justify-between">
             <div>
@@ -230,6 +263,7 @@ export default function AdminDashboard() {
           </div>
         </div>
         
+        {/* Active Staff Card */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition">
           <div className="flex items-center justify-between">
             <div>
@@ -246,21 +280,50 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
-        
+
+        {/* Total Orders Card - Real Data */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition cursor-pointer" onClick={() => router.push('/admin/orders')}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-500 text-sm mb-1">Today's Orders</p>
-              <p className="text-3xl font-bold text-orange-600">{stats.totalOrders}</p>
+              <p className="text-gray-500 text-sm mb-1">Total Orders</p>
+              <p className="text-3xl font-bold text-blue-600">{orderStats.totalOrders}</p>
               <p className="text-xs text-gray-500 mt-1">
-                <Clock className="inline h-3 w-3 mr-1" />
-                Pending: {stats.activeOrders}
+                <Package className="inline h-3 w-3 mr-1" />
+                All time orders
               </p>
             </div>
-            <div className="bg-orange-50 p-3 rounded-full">
-              <Mail className="h-8 w-8 text-orange-600" />
+            <div className="bg-blue-50 p-3 rounded-full">
+              <Package className="h-8 w-8 text-blue-600" />
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Order Status Cards - Quick Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+        <div className="bg-yellow-50 rounded-xl p-4 cursor-pointer hover:bg-yellow-100 transition" onClick={() => router.push('/admin/orders?status=pending')}>
+          <p className="text-xs text-yellow-700 mb-1">Pending</p>
+          <p className="text-2xl font-bold text-yellow-800">{orderStats.pendingOrders}</p>
+        </div>
+        <div className="bg-blue-50 rounded-xl p-4 cursor-pointer hover:bg-blue-100 transition" onClick={() => router.push('/admin/orders?status=confirmed')}>
+          <p className="text-xs text-blue-700 mb-1">Confirmed</p>
+          <p className="text-2xl font-bold text-blue-800">{orderStats.confirmedOrders}</p>
+        </div>
+        <div className="bg-purple-50 rounded-xl p-4 cursor-pointer hover:bg-purple-100 transition" onClick={() => router.push('/admin/orders?status=preparing')}>
+          <p className="text-xs text-purple-700 mb-1">Preparing</p>
+          <p className="text-2xl font-bold text-purple-800">{orderStats.preparingOrders}</p>
+        </div>
+        <div className="bg-indigo-50 rounded-xl p-4 cursor-pointer hover:bg-indigo-100 transition" onClick={() => router.push('/admin/orders?status=ready')}>
+          <p className="text-xs text-indigo-700 mb-1">Ready</p>
+          <p className="text-2xl font-bold text-indigo-800">{orderStats.readyOrders}</p>
+        </div>
+        <div className="bg-green-50 rounded-xl p-4 cursor-pointer hover:bg-green-100 transition" onClick={() => router.push('/admin/orders?status=delivered')}>
+          <p className="text-xs text-green-700 mb-1">Delivered</p>
+          <p className="text-2xl font-bold text-green-800">{orderStats.deliveredOrders}</p>
+        </div>
+        <div className="bg-red-50 rounded-xl p-4 cursor-pointer hover:bg-red-100 transition" onClick={() => router.push('/admin/orders?status=cancelled')}>
+          <p className="text-xs text-red-700 mb-1">Cancelled</p>
+          <p className="text-2xl font-bold text-red-800">{orderStats.cancelledOrders}</p>
         </div>
       </div>
 
@@ -349,7 +412,7 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {/* Add Staff Modal - Professional Blur Background */}
+      {/* Add Staff Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 animate-in fade-in zoom-in duration-200">
@@ -468,7 +531,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Edit Staff Modal - Professional Blur Background */}
+      {/* Edit Staff Modal */}
       {editingStaff && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 animate-in fade-in zoom-in duration-200">

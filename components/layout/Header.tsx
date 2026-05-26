@@ -18,14 +18,35 @@ import {
   Settings,
   ShoppingBag
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 
 export function Header() {
   const pathname = usePathname();
   const router = useRouter();
-  const { isLoggedIn, userRole, cartCount, user, logout } = useAuth();
+  const { isLoggedIn, userRole, cartCount, user, logout, refreshUser } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [displayName, setDisplayName] = useState(user?.name || "");
+
+  // Update display name when user changes
+  useEffect(() => {
+    setDisplayName(user?.name || "");
+  }, [user]);
+
+  // Listen for profile updates
+  useEffect(() => {
+    const handleUserUpdate = async () => {
+      await refreshUser();
+    };
+    
+    window.addEventListener('profileUpdated', handleUserUpdate);
+    window.addEventListener('userUpdated', handleUserUpdate);
+    
+    return () => {
+      window.removeEventListener('profileUpdated', handleUserUpdate);
+      window.removeEventListener('userUpdated', handleUserUpdate);
+    };
+  }, [refreshUser]);
 
   const handleLogout = () => {
     logout();
@@ -46,7 +67,7 @@ export function Header() {
     { href: "/dashboard/profile", label: "Profile", icon: User },
   ];
 
-  // Admin navigation (logged in as admin) -
+  // Admin navigation (logged in as admin)
   const adminNavItems = [
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
     { href: "/admin/staff", label: "Staff", icon: Settings },
@@ -57,8 +78,8 @@ export function Header() {
   // Determine which nav items to show based on role
   const getNavItems = () => {
     if (!isLoggedIn) return publicNavItems;
-    if (userRole === "admin") return adminNavItems;  // Admin only sees adminNavItems
-    return staffNavItems;  // Staff only sees staffNavItems
+    if (userRole === "admin") return adminNavItems;
+    return staffNavItems;
   };
 
   const navItems = getNavItems();
@@ -68,6 +89,18 @@ export function Header() {
     if (!isLoggedIn) return "/";
     if (userRole === "admin") return "/admin";
     return "/dashboard";
+  };
+
+  // Check if a path is active (handles nested routes)
+  const isPathActive = (href: string) => {
+    if (href === "/") return pathname === "/";
+    if (href === "/admin") return pathname === "/admin";
+    if (href === "/dashboard") return pathname === "/dashboard";
+    // For nested routes like /admin/orders, check if pathname starts with href
+    if (href !== "/" && href !== "/admin" && href !== "/dashboard") {
+      return pathname?.startsWith(href);
+    }
+    return pathname === href;
   };
 
   return (
@@ -82,7 +115,7 @@ export function Header() {
             <div>
               <span className="font-bold text-xl text-gray-900">NNGW Canteen</span>
               <span className="hidden md:inline-block text-xs text-gray-500 ml-2">
-               <strong> Staff Food Service</strong>
+                Staff Food Service
               </span>
             </div>
           </Link>
@@ -91,8 +124,7 @@ export function Header() {
           <div className="hidden md:flex items-center space-x-1">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href || 
-                              (item.href !== "/" && pathname?.startsWith(item.href));
+              const isActive = isPathActive(item.href);
               return (
                 <Link
                   key={item.href}
@@ -109,13 +141,13 @@ export function Header() {
               );
             })}
 
-            {/* Cart Icon - Only visible when logged in as staff */}
+            {/* Cart Icon - Only visible when logged in as staff - goes to checkout */}
             {isLoggedIn && userRole === "staff" && (
               <Link
-                href="/dashboard/orders"
-                className="relative ml-2 p-2 rounded-lg hover:bg-gray-100 transition"
+                href="/dashboard/checkout"
+                className="relative ml-2 p-2 rounded-lg hover:bg-gray-100 transition group"
               >
-                <ShoppingBag className="h-5 w-5 text-gray-600" />
+                <ShoppingBag className="h-5 w-5 text-gray-600 group-hover:text-blue-600 transition" />
                 {cartCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
                     {cartCount}
@@ -128,7 +160,7 @@ export function Header() {
             {isLoggedIn ? (
               <div className="ml-4 flex items-center gap-3">
                 <div className="text-right hidden lg:block">
-                  <p className="text-sm font-semibold text-gray-900">{user?.name}</p>
+                  <p className="text-sm font-semibold text-gray-900">{displayName || user?.name}</p>
                   <p className="text-xs text-gray-500 capitalize">{userRole}</p>
                 </div>
                 <button
@@ -149,7 +181,7 @@ export function Header() {
                 }`}
               >
                 <LogIn className="h-4 w-4" />
-                <span>Login</span>
+                <span>Staff Login</span>
               </Link>
             )}
           </div>
@@ -173,7 +205,7 @@ export function Header() {
             <div className="space-y-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = pathname === item.href;
+                const isActive = isPathActive(item.href);
                 return (
                   <Link
                     key={item.href}
@@ -191,10 +223,10 @@ export function Header() {
                 );
               })}
 
-              {/* Cart in mobile menu - Only for staff */}
+              {/* Cart in mobile menu - Only for staff - goes to checkout */}
               {isLoggedIn && userRole === "staff" && (
                 <Link
-                  href="/dashboard/orders"
+                  href="/dashboard/checkout"
                   className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-gray-50 transition"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
@@ -229,7 +261,7 @@ export function Header() {
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <LogIn className="h-5 w-5" />
-                  <span className="font-medium">Login</span>
+                  <span className="font-medium">Staff Login</span>
                 </Link>
               )}
             </div>
@@ -237,7 +269,7 @@ export function Header() {
             {/* User Info Footer */}
             {isLoggedIn && user && (
               <div className="mt-4 pt-4 border-t border-gray-200 px-4">
-                <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                <p className="text-sm font-medium text-gray-900">{displayName || user.name}</p>
                 <p className="text-xs text-gray-500 mt-1">
                   Logged in as {userRole === "admin" ? "Administrator" : "Staff Member"}
                 </p>
