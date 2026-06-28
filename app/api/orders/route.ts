@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/mongodb';
 import Order from '@/models/Order';
 import MenuItem from '@/models/MenuItem';
 import { getSessionFromRequest } from '@/lib/auth-cookies';
+import { sendNewOrderAdminEmail } from '@/lib/email';
 
 export async function GET(req: NextRequest) {
   try {
@@ -80,6 +81,14 @@ export async function POST(req: NextRequest) {
       totalAmount,
       status: 'pending',
     });
+    
+    // ✅ Send email notification to admin about new order
+    await sendNewOrderAdminEmail(
+      process.env.ADMIN_EMAIL || 'admin@nngw.com',
+      order.orderNumber,
+      order.staffName,
+      order.totalAmount
+    );
     
     return NextResponse.json({
       success: true,
