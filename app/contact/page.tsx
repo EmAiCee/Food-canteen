@@ -1,172 +1,79 @@
-"use client";
-
-import { useState } from "react";
-import { Mail, Phone, MapPin, Send } from "lucide-react";
+import { Mail, Phone, MapPin, Clock } from "lucide-react";
 
 export default function ContactPage() {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    subject: "",
-    message: "",
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    
-    // Simulate form submission
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSubmitted(true);
-      setFormData({ name: "", email: "", subject: "", message: "" });
-      setTimeout(() => setSubmitted(false), 3000);
-    }, 1000);
-  };
-
   return (
     <div className="container mx-auto px-4 py-12">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl font-bold text-gray-900 mb-6 text-center">Contact Us</h1>
-        <p className="text-center text-gray-600 mb-12 max-w-2xl mx-auto">
-          Have questions or feedback? We'd love to hear from you. Get in touch with our team.
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">Contact Us</h1>
+        <p className="text-center text-gray-600 mb-10">
+          For inquiries about the canteen, reach out to us through any of the channels below.
         </p>
 
-        <div className="grid md:grid-cols-2 gap-8">
+        <div className="grid md:grid-cols-2 gap-6">
           {/* Contact Information */}
-          <div className="space-y-6">
-            <div className="card">
-              <h2 className="text-2xl font-semibold mb-6">Get in Touch</h2>
-              
-              <div className="space-y-4">
-                <div className="flex items-start space-x-3">
-                  <div className="bg-blue-100 p-2 rounded-lg">
-                    <MapPin className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">Location</h3>
-                    <p className="text-gray-600">NNGW Headquarters, Main Building<br />Ground Floor, Canteen Section</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-3">
-                  <div className="bg-blue-100 p-2 rounded-lg">
-                    <Phone className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">Phone</h3>
-                    <p className="text-gray-600">+234 (0) 123 456 7890<br />Ext: 1234</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-3">
-                  <div className="bg-blue-100 p-2 rounded-lg">
-                    <Mail className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">Email</h3>
-                    <p className="text-gray-600">canteen@nngw.com<br />support@nngw.com</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="card bg-blue-50">
-              <h3 className="font-semibold text-gray-900 mb-2">Operating Hours</h3>
-              <div className="space-y-1 text-gray-600">
-                <p>Monday - Friday: 8:00 AM - 5:00 PM</p>
-                <p>Saturday: 9:00 AM - 2:00 PM</p>
-                <p>Sunday: Closed</p>
-                <p className="text-sm text-gray-500 mt-2">Last orders accepted 30 minutes before closing</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Contact Form */}
-          <div className="card">
-            <h2 className="text-2xl font-semibold mb-6">Send us a Message</h2>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-5">
+            <h2 className="text-lg font-semibold text-gray-900 border-b pb-3">Get in Touch</h2>
             
-            {submitted && (
-              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4">
-                Thank you for your message! We'll get back to you soon.
+            <div className="flex items-start space-x-3">
+              <div className="bg-blue-100 p-2 rounded-lg flex-shrink-0">
+                <MapPin className="h-5 w-5 text-blue-600" />
               </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Your Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
+                <h3 className="font-medium text-gray-900">Location</h3>
+                <p className="text-gray-600 text-sm">NNGW Headquarters, Ground Floor</p>
               </div>
+            </div>
 
+            <div className="flex items-start space-x-3">
+              <div className="bg-blue-100 p-2 rounded-lg flex-shrink-0">
+                <Phone className="h-5 w-5 text-blue-600" />
+              </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email Address *
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
+                <h3 className="font-medium text-gray-900">Phone</h3>
+                <p className="text-gray-600 text-sm">Ext: 1234</p>
               </div>
+            </div>
 
+            <div className="flex items-start space-x-3">
+              <div className="bg-blue-100 p-2 rounded-lg flex-shrink-0">
+                <Mail className="h-5 w-5 text-blue-600" />
+              </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Subject *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.subject}
-                  onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
+                <h3 className="font-medium text-gray-900">Email</h3>
+                <p className="text-gray-600 text-sm">canteen@nngw.com</p>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Message *
-                </label>
-                <textarea
-                  required
-                  rows={5}
-                  value={formData.message}
-                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                  placeholder="Please provide details about your inquiry..."
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="w-5 h-5 border-t-2 border-white rounded-full animate-spin"></div>
-                    <span>Sending...</span>
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-5 w-5" />
-                    <span>Send Message</span>
-                  </>
-                )}
-              </button>
-            </form>
+            </div>
           </div>
+
+          {/* Operating Hours */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-5">
+            <h2 className="text-lg font-semibold text-gray-900 border-b pb-3">Operating Hours</h2>
+            
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between py-1">
+                <span className="text-gray-600">Monday - Friday</span>
+                <span className="font-medium text-gray-900">8:00 AM - 5:00 PM</span>
+              </div>
+              
+              <div className="flex justify-between py-1 border-t">
+                <span className="text-gray-600">Weekend</span>
+                <span className="font-medium text-red-500">Closed</span>
+              </div>
+            </div>
+            
+            <div className="bg-blue-50 rounded-lg p-3 mt-3">
+             <strong> <p className="text-xs text-gray-600 text-center">
+                Last orders accepted 30 minutes before closing
+              </p></strong>
+            </div>
+          </div>
+        </div>
+
+        {/* Simple Message */}
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-500">
+            For immediate assistance, please visit the canteen or call extension 1234.
+          </p>
         </div>
       </div>
     </div>
