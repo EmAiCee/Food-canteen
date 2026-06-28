@@ -222,7 +222,7 @@ export default function StaffManagement() {
                     }`}>
                       {member.role}
                     </span>
-                   </td>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <button
                       onClick={() => toggleStatus(member)}
@@ -234,7 +234,7 @@ export default function StaffManagement() {
                     >
                       {member.status}
                     </button>
-                   </td>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <div className="flex gap-2">
                       <button
@@ -261,8 +261,8 @@ export default function StaffManagement() {
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
-                   </td>
-                </td>
+                  </td>
+                </tr>
               ))}
             </tbody>
           </table>

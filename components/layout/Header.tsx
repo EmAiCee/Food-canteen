@@ -181,7 +181,7 @@ export function Header() {
                 }`}
               >
                 <LogIn className="h-4 w-4" />
-                <span>Staff Login</span>
+                <span> Login</span>
               </Link>
             )}
           </div>
