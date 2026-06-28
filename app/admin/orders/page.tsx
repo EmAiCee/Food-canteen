@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { Package, Eye, CheckCircle, XCircle, Clock, Truck, Coffee, Loader2, Filter } from "lucide-react";
+import { 
+  Package, Eye, XCircle, Clock, Truck, Coffee, Loader2, Filter, 
+  DollarSign, CreditCard, CheckCircle 
+} from "lucide-react";
 
 interface OrderItem {
   name: string;
@@ -21,6 +24,10 @@ interface Order {
   deliveryLocation: string;
   deliveryNote?: string;
   status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
+  paymentStatus: 'pending' | 'paid';
+  paymentMethod?: string;
+  paidAt?: string;
+  collectedBy?: string;
   createdAt: string;
 }
 
@@ -33,6 +40,11 @@ const statusColors = {
   cancelled: 'bg-red-100 text-red-800',
 };
 
+const paymentColors = {
+  pending: 'bg-orange-100 text-orange-800',
+  paid: 'bg-green-100 text-green-800',
+};
+
 const statusOrder = ['pending', 'confirmed', 'preparing', 'ready', 'delivered'];
 
 export default function AdminOrdersPage() {
@@ -40,8 +52,9 @@ export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [updatingPayment, setUpdatingPayment] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   
-  // Get status from URL or default to 'all'
   const statusParam = searchParams.get('status');
   const [filter, setFilter] = useState<string>(statusParam || 'all');
 
@@ -73,22 +86,60 @@ export default function AdminOrdersPage() {
       });
       
       if (response.ok) {
+        setMessage({ type: 'success', text: `Order status updated to ${newStatus}` });
         fetchOrders();
         if (selectedOrder) {
           setSelectedOrder(null);
         }
+        setTimeout(() => setMessage(null), 3000);
       } else {
         const data = await response.json();
-        alert(data.error || "Failed to update status");
+        setMessage({ type: 'error', text: data.error || "Failed to update status" });
       }
     } catch (error) {
-      alert("Network error. Please try again.");
+      setMessage({ type: 'error', text: "Network error. Please try again." });
+    }
+  };
+
+  const markPaymentAsPaid = async (orderId: string, paymentMethod: string = 'cash') => {
+    setUpdatingPayment(true);
+    try {
+      const response = await fetch(`/api/admin/orders/${orderId}/payment`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentMethod }),
+      });
+      
+      if (response.ok) {
+        setMessage({ type: 'success', text: 'Payment marked as collected!' });
+        fetchOrders();
+        if (selectedOrder) {
+          setSelectedOrder(null);
+        }
+        setTimeout(() => setMessage(null), 3000);
+      } else {
+        const data = await response.json();
+        setMessage({ type: 'error', text: data.error || "Failed to update payment" });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: "Network error. Please try again." });
+    } finally {
+      setUpdatingPayment(false);
     }
   };
 
   const filteredOrders = filter === 'all' 
     ? orders 
     : orders.filter(order => order.status === filter);
+
+  // Calculate payment statistics
+  const totalPendingPayment = orders
+    .filter(o => o.paymentStatus === 'pending' && o.status === 'delivered')
+    .reduce((sum, o) => sum + o.totalAmount, 0);
+  
+  const totalCollected = orders
+    .filter(o => o.paymentStatus === 'paid')
+    .reduce((sum, o) => sum + o.totalAmount, 0);
 
   if (loading) {
     return (
@@ -101,6 +152,42 @@ export default function AdminOrdersPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Message Alert */}
+      {message && (
+        <div className={`mb-4 p-4 rounded-lg ${
+          message.type === 'success' 
+            ? 'bg-green-50 text-green-800 border border-green-200' 
+            : 'bg-red-50 text-red-800 border border-red-200'
+        }`}>
+          {message.text}
+        </div>
+      )}
+
+      {/* Payment Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="bg-orange-50 rounded-xl p-4 border border-orange-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-orange-700 mb-1">Pending Collection</p>
+              <p className="text-2xl font-bold text-orange-800">₦{totalPendingPayment.toLocaleString()}</p>
+              <p className="text-xs text-orange-600 mt-1">From delivered orders</p>
+            </div>
+            <DollarSign className="h-8 w-8 text-orange-600" />
+          </div>
+        </div>
+        <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-green-700 mb-1">Total Collected</p>
+              <p className="text-2xl font-bold text-green-800">₦{totalCollected.toLocaleString()}</p>
+              <p className="text-xs text-green-600 mt-1">All time payments</p>
+            </div>
+            <CreditCard className="h-8 w-8 text-green-600" />
+          </div>
+        </div>
+      </div>
+
+      {/* Header with Filter */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Order Management</h1>
         <div className="flex items-center gap-2">
@@ -121,6 +208,7 @@ export default function AdminOrdersPage() {
         </div>
       </div>
 
+      {/* Orders List */}
       <div className="grid gap-4">
         {filteredOrders.map((order) => (
           <div key={order._id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition">
@@ -131,8 +219,10 @@ export default function AdminOrdersPage() {
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[order.status]}`}>
                     {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                   </span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${paymentColors[order.paymentStatus]}`}>
+                    {order.paymentStatus === 'paid' ? '✓ Paid' : 'Pending Payment'}
+                  </span>
                   <span className="text-sm text-gray-500">{order.staffName}</span>
-                  <span className="text-xs text-gray-400">{order.staffDepartment || 'No Department'}</span>
                 </div>
                 <p className="text-sm text-gray-500 mt-2">
                   {order.items.length} item(s) • {order.deliveryLocation}
@@ -162,7 +252,7 @@ export default function AdminOrdersPage() {
         )}
       </div>
 
-      {/* Order Details Modal with Status Update */}
+      {/* Order Details Modal with Payment */}
       {selectedOrder && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
@@ -195,6 +285,19 @@ export default function AdminOrdersPage() {
                   <p className="text-xs text-gray-500">Delivery Location</p>
                   <p className="text-sm">{selectedOrder.deliveryLocation}</p>
                 </div>
+                <div>
+                  <p className="text-xs text-gray-500">Payment Status</p>
+                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${paymentColors[selectedOrder.paymentStatus]}`}>
+                    {selectedOrder.paymentStatus === 'paid' ? '✓ Paid' : 'Pending Payment'}
+                  </span>
+                </div>
+                {selectedOrder.paidAt && (
+                  <div>
+                    <p className="text-xs text-gray-500">Paid At</p>
+                    <p className="text-sm">{new Date(selectedOrder.paidAt).toLocaleString()}</p>
+                    <p className="text-xs text-gray-500">Collected by: {selectedOrder.collectedBy}</p>
+                  </div>
+                )}
               </div>
               
               {/* Items */}
@@ -221,7 +324,7 @@ export default function AdminOrdersPage() {
                 </div>
               </div>
               
-              {/* Status Update - Admin Only */}
+              {/* Status Update */}
               {selectedOrder.status !== 'delivered' && selectedOrder.status !== 'cancelled' && (
                 <div className="border-t pt-4">
                   <p className="font-semibold mb-3">Update Status</p>
@@ -253,6 +356,34 @@ export default function AdminOrdersPage() {
                       );
                     })}
                   </div>
+                </div>
+              )}
+              
+              {/* Payment Section - Show for delivered orders not paid */}
+              {selectedOrder.status === 'delivered' && selectedOrder.paymentStatus === 'pending' && (
+                <div className="border-t pt-4">
+                  <p className="font-semibold mb-3">Payment Collection</p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => markPaymentAsPaid(selectedOrder._id, 'cash')}
+                      disabled={updatingPayment}
+                      className="flex-1 bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 transition flex items-center justify-center gap-2"
+                    >
+                      <DollarSign className="h-4 w-4" />
+                      Mark as Paid (Cash)
+                    </button>
+                    <button
+                      onClick={() => markPaymentAsPaid(selectedOrder._id, 'card')}
+                      disabled={updatingPayment}
+                      className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition flex items-center justify-center gap-2"
+                    >
+                      <CreditCard className="h-4 w-4" />
+                      Card Payment
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 text-center mt-3">
+                    Collect cash payment at delivery desk
+                  </p>
                 </div>
               )}
               

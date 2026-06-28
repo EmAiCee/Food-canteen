@@ -15,7 +15,27 @@ export async function GET(req: NextRequest) {
     // Get all orders for statistics
     const orders = await Order.find({});
     
+    // Calculate pending payment (delivered but not paid)
+    const pendingPayment = orders
+      .filter(o => o.paymentStatus === 'pending' && o.status === 'delivered')
+      .reduce((sum, o) => sum + o.totalAmount, 0);
+    
+    // Calculate total collected (all paid orders)
+    const totalCollected = orders
+      .filter(o => o.paymentStatus === 'paid')
+      .reduce((sum, o) => sum + o.totalAmount, 0);
+    
+    // Payment method breakdown
+    const cashPayments = orders
+      .filter(o => o.paymentMethod === 'cash' && o.paymentStatus === 'paid')
+      .reduce((sum, o) => sum + o.totalAmount, 0);
+    
+    const cardPayments = orders
+      .filter(o => o.paymentMethod === 'card' && o.paymentStatus === 'paid')
+      .reduce((sum, o) => sum + o.totalAmount, 0);
+    
     const stats = {
+      // Order status counts
       totalOrders: orders.length,
       pendingOrders: orders.filter(o => o.status === 'pending').length,
       confirmedOrders: orders.filter(o => o.status === 'confirmed').length,
@@ -23,9 +43,21 @@ export async function GET(req: NextRequest) {
       readyOrders: orders.filter(o => o.status === 'ready').length,
       deliveredOrders: orders.filter(o => o.status === 'delivered').length,
       cancelledOrders: orders.filter(o => o.status === 'cancelled').length,
+      
+      // Revenue stats
       totalRevenue: orders
         .filter(o => o.status === 'delivered')
         .reduce((sum, o) => sum + o.totalAmount, 0),
+      
+      // Payment stats
+      pendingPayment,
+      totalCollected,
+      cashPayments,
+      cardPayments,
+      
+      // Payment counts
+      paidOrdersCount: orders.filter(o => o.paymentStatus === 'paid').length,
+      pendingPaymentCount: orders.filter(o => o.paymentStatus === 'pending' && o.status === 'delivered').length,
     };
     
     return NextResponse.json(stats);
