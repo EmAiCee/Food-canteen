@@ -20,6 +20,8 @@ export interface IOrder {
   status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
   paymentStatus: 'pending' | 'paid';
   paymentMethod?: 'cash' | 'card' | 'salary';
+  paidAt?: Date;
+  collectedBy?: string;
   cancelledAt?: Date;
   deliveredAt?: Date;
   createdAt: Date;
@@ -70,6 +72,8 @@ const OrderSchema = new mongoose.Schema(
       type: String,
       enum: ['cash', 'card', 'salary'],
     },
+    paidAt: { type: Date },
+    collectedBy: { type: String },
     cancelledAt: { type: Date },
     deliveredAt: { type: Date },
   },
@@ -78,9 +82,9 @@ const OrderSchema = new mongoose.Schema(
   }
 );
 
-// Create indexes (no arrow functions here)
 OrderSchema.index({ staffId: 1, createdAt: -1 });
 OrderSchema.index({ orderNumber: 1 });
 OrderSchema.index({ status: 1 });
+OrderSchema.index({ paymentStatus: 1 });
 
 export default mongoose.models.Order || mongoose.model<IOrder>('Order', OrderSchema);

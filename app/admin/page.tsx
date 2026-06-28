@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Users, Plus, Search, Mail, UserCheck, Trash2, Edit2, X, Loader2, TrendingUp, Clock, Package } from "lucide-react";
+import { Users, Plus, Search, Mail, UserCheck, Trash2, Edit2, X, Loader2, TrendingUp, Clock, Package, DollarSign, CreditCard } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 interface Staff {
@@ -24,6 +24,12 @@ interface OrderStats {
   deliveredOrders: number;
   cancelledOrders: number;
   totalRevenue: number;
+  pendingPayment: number;
+  totalCollected: number;
+  cashPayments: number;
+  cardPayments: number;
+  paidOrdersCount: number;
+  pendingPaymentCount: number;
 }
 
 export default function AdminDashboard() {
@@ -39,6 +45,12 @@ export default function AdminDashboard() {
     deliveredOrders: 0,
     cancelledOrders: 0,
     totalRevenue: 0,
+    pendingPayment: 0,
+    totalCollected: 0,
+    cashPayments: 0,
+    cardPayments: 0,
+    paidOrdersCount: 0,
+    pendingPaymentCount: 0,
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -244,8 +256,8 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      {/* Stats Cards - Staff Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {/* Total Staff Card */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition">
           <div className="flex items-center justify-between">
@@ -281,7 +293,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Total Orders Card - Real Data */}
+        {/* Total Orders Card */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition cursor-pointer" onClick={() => router.push('/admin/orders')}>
           <div className="flex items-center justify-between">
             <div>
@@ -295,6 +307,64 @@ export default function AdminDashboard() {
             <div className="bg-blue-50 p-3 rounded-full">
               <Package className="h-8 w-8 text-blue-600" />
             </div>
+          </div>
+        </div>
+
+        {/* Total Revenue Card */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-500 text-sm mb-1">Total Revenue</p>
+              <p className="text-3xl font-bold text-emerald-600">₦{orderStats.totalRevenue.toLocaleString()}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                From {orderStats.deliveredOrders} delivered orders
+              </p>
+            </div>
+            <div className="bg-emerald-50 p-3 rounded-full">
+              <DollarSign className="h-8 w-8 text-emerald-600" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Payment Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="bg-orange-50 rounded-xl p-4 border border-orange-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-orange-700 mb-1">Pending Collection</p>
+              <p className="text-2xl font-bold text-orange-800">₦{orderStats.pendingPayment.toLocaleString()}</p>
+              <p className="text-xs text-orange-600 mt-1">{orderStats.pendingPaymentCount} orders awaiting payment</p>
+            </div>
+            <DollarSign className="h-8 w-8 text-orange-600" />
+          </div>
+        </div>
+        <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-green-700 mb-1">Total Collected</p>
+              <p className="text-2xl font-bold text-green-800">₦{orderStats.totalCollected.toLocaleString()}</p>
+              <p className="text-xs text-green-600 mt-1">{orderStats.paidOrdersCount} orders paid</p>
+            </div>
+            <CreditCard className="h-8 w-8 text-green-600" />
+          </div>
+        </div>
+        <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-blue-700 mb-1">Cash Payments</p>
+              <p className="text-xl font-bold text-blue-800">₦{orderStats.cashPayments.toLocaleString()}</p>
+            </div>
+            <DollarSign className="h-6 w-6 text-blue-600" />
+          </div>
+        </div>
+        <div className="bg-purple-50 rounded-xl p-4 border border-purple-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-purple-700 mb-1">Card Payments</p>
+              <p className="text-xl font-bold text-purple-800">₦{orderStats.cardPayments.toLocaleString()}</p>
+            </div>
+            <CreditCard className="h-6 w-6 text-purple-600" />
           </div>
         </div>
       </div>
