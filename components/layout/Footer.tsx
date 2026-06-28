@@ -49,11 +49,11 @@ export function Footer() {
             <ul className="space-y-3 text-sm">
               <li className="flex items-start gap-3">
                 <MapPin className="h-4 w-4 text-blue-400 mt-0.5" />
-                <span>NNGW Headquarters, Main Building</span>
+                <span>NNGW Headquarters, jabi , Abuja</span>
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="h-4 w-4 text-blue-400" />
-                <span>+234 (0) 123 456 7890</span>
+                <span>+2349014899278</span>
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="h-4 w-4 text-blue-400" />
@@ -86,13 +86,13 @@ export function Footer() {
         <div className="border-t border-gray-700 pt-6 flex flex-col md:flex-row justify-between items-center gap-4 text-xs">
           <div className="flex items-center gap-2">
             <span>© {currentYear} NNGW Canteen</span>
-            <Heart className="h-3 w-3 text-red-500" />
+         
             <span>All rights reserved</span>
           </div>
-          <div className="flex gap-6">
+          {/* <div className="flex gap-6">
             <Link href="/privacy" className="hover:text-blue-400 transition">Privacy Policy</Link>
             <Link href="/terms" className="hover:text-blue-400 transition">Terms of Service</Link>
-          </div>
+          </div> */}
         </div>
       </div>
     </footer>
